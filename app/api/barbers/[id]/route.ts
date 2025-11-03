@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import prisma from "../../../lib/prisma";
 
-export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
-  const params = await context.params; // <-- unwrap the Promise
-  const id = Number(params.id);
-
-  if (isNaN(id)) return new Response("Invalid ID", { status: 400 });
-
-  const { name, experience, bio } = await req.json();
-
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> } // params is a Promise
+) {
   try {
+    const { id } = await params; 
+
+    if (isNaN(Number(id))) {
+      return new Response("Invalid ID", { status: 400 });
+    }
+
+    const { name, experience, bio } = await req.json();
+
     const barber = await prisma.barber.update({
-      where: { id },
+      where: { id: Number(id) },
       data: { name, experience, bio },
     });
     return NextResponse.json(barber);
@@ -23,17 +27,16 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
 export async function DELETE(
   req: Request,
-  context: { params: Promise<{ id: string }> } // params is now a Promise
+  { params }: { params: Promise<{ id: string }> } // params is a Promise
 ) {
-  const params = await context.params; // unwrap the Promise
-  const id = Number(params.id);
-
-  if (isNaN(id)) {
-    return new Response("Invalid ID", { status: 400 });
-  }
-
   try {
-    await prisma.barber.delete({ where: { id } });
+    const { id } = await params; 
+
+    if (isNaN(Number(id))) {
+      return new Response("Invalid ID", { status: 400 });
+    }
+    
+    await prisma.barber.delete({ where: { id: Number(id) } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Error deleting barber:", err);

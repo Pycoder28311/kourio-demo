@@ -12,13 +12,13 @@ export async function PUT(
       return new Response("Invalid ID", { status: 400 });
     }
 
-    const { name, price, durationMinutes } = await req.json();
+    const { name } = await req.json();
 
-    const service = await prisma.service.update({
+    const serviceCategory = await prisma.serviceCategory.update({
       where: { id: Number(id) },
-      data: { name, price, durationMinutes },
+      data: { name },
     });
-    return NextResponse.json(service);
+    return NextResponse.json(serviceCategory);
   } catch (err) {
     console.error("Error updating service:", err);
     return new Response("Service not found or update failed", { status: 404 });
@@ -36,8 +36,11 @@ export async function DELETE(
       return new Response("Invalid ID", { status: 400 });
     }
 
-    await prisma.service.delete({ where: { id: Number(id) } });
-    return NextResponse.json({ success: true });
+    const deleted = await prisma.serviceCategory.delete({
+      where: { id: Number(id) },
+    });
+
+    return NextResponse.json({ success: true, deleted });
   } catch (err) {
     console.error("Error deleting service:", err);
     return new Response("Service not found or delete failed", { status: 404 });

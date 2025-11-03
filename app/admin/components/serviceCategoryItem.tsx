@@ -13,24 +13,37 @@ type EditableBarber = Barber & {
   editBio?: string;
 };
 
-type BarberItemProps = {
-  barber: EditableBarber;
+interface Service {
+  id: number;
+  name: string;
+  price: number;
+  durationMinutes: number;
+}
+
+interface ServiceCategory {
+  id: number;
+  name: string;
+  services: Service[];
+}
+
+type ServiceCategoryItemProps = {
+  serviceCategory: ServiceCategory;
   isEditing: boolean;
-  editValues: { name: string; experience: number; bio: string };
-  barberEdits: { [key: number]: { name: string; experience: number; bio: string } };
-  setBarberEdits: React.Dispatch<React.SetStateAction<{ [key: number]: { name: string; experience: number; bio: string } }>>;
+  editValues: { name: string; services: Service[] };
+  serviceCategoryEdits: { [key: number]: { name: string; services: Service[] } };
+  setServiceCategoryEdits: React.Dispatch<React.SetStateAction<{ [key: number]: { name: string; services: Service[] } }>>;
   setEditingId: React.Dispatch<React.SetStateAction<number | null>>;
-  handleAddOrEdit: (type: "barbers", data: any, id?: number) => Promise<void>;
-  handleDelete: (type: "barbers", id: number) => void;
+  handleAddOrEdit: (type: "serviceCategory", data: any, id?: number) => Promise<void>;
+  handleDelete: (type: "serviceCategory", id: number) => void;
   fetchData: () => void;
 };
 
-const BarberItem: React.FC<BarberItemProps> = ({
-  barber,
+const ServiceCategoryItem: React.FC<ServiceCategoryItemProps> = ({
+  serviceCategory,
   isEditing,
   editValues,
-  barberEdits,
-  setBarberEdits,
+  serviceCategoryEdits,
+  setServiceCategoryEdits,
   setEditingId,
   handleAddOrEdit,
   handleDelete,
@@ -47,32 +60,14 @@ const BarberItem: React.FC<BarberItemProps> = ({
               type="text"
               value={editValues.name}
               onChange={e =>
-                setBarberEdits({ ...barberEdits, [barber.id]: { ...editValues, name: e.target.value } })
+                setServiceCategoryEdits({ ...serviceCategoryEdits, [serviceCategory.id]: { ...editValues, name: e.target.value } })
               }
               className="border p-2 w-full md:w-40"
-            />
-            <input
-              type="number"
-              value={editValues.experience}
-              onChange={e =>
-                setBarberEdits({ ...barberEdits, [barber.id]: { ...editValues, experience: Number(e.target.value) } })
-              }
-              className="border p-2 w-full md:w-32"
-            />
-            <input
-              type="text"
-              value={editValues.bio}
-              onChange={e =>
-                setBarberEdits({ ...barberEdits, [barber.id]: { ...editValues, bio: e.target.value } })
-              }
-              className="border p-2 w-full md:w-64"
             />
           </>
         ) : (
           <>
-            <p className="w-full md:w-40">{barber.name}</p>
-            <p className="w-full md:w-32">{barber.experience} yrs</p>
-            <p className="w-full md:w-64">{barber.bio}</p>
+            <p className="w-full md:w-40">{serviceCategory.name}</p>
           </>
         )}
       </div>
@@ -83,7 +78,7 @@ const BarberItem: React.FC<BarberItemProps> = ({
           <>
             <button
               onClick={async () => {
-                await handleAddOrEdit("barbers", editValues, barber.id);
+                await handleAddOrEdit("serviceCategory", editValues, serviceCategory.id);
                 setEditingId(null);
                 fetchData();
               }}
@@ -102,13 +97,12 @@ const BarberItem: React.FC<BarberItemProps> = ({
           <>
             <button
               onClick={() => {
-                setEditingId(barber.id);
-                setBarberEdits({
-                  ...barberEdits,
-                  [barber.id]: {
-                    name: barber.name ?? "",
-                    experience: barber.experience ?? 0,
-                    bio: barber.bio ?? ""
+                setEditingId(serviceCategory.id);
+                setServiceCategoryEdits({
+                  ...serviceCategoryEdits,
+                  [serviceCategory.id]: {
+                    name: serviceCategory.name ?? "",
+                    services: serviceCategory.services ?? [],
                   }
                 });
               }}
@@ -117,7 +111,7 @@ const BarberItem: React.FC<BarberItemProps> = ({
               Edit
             </button>
             <button
-              onClick={() => handleDelete("barbers", barber.id)}
+              onClick={() => handleDelete("serviceCategory", serviceCategory.id)}
               className="bg-red-600 text-white p-1 rounded"
             >
               Delete
@@ -130,4 +124,4 @@ const BarberItem: React.FC<BarberItemProps> = ({
   );
 };
 
-export default BarberItem;
+export default ServiceCategoryItem;

@@ -2,12 +2,21 @@
 
 import { useState, useEffect } from "react";
 import BarberItem from "./components/barberItem";
+import ServiceCategoryItem from "./components/serviceCategoryItem";
 
 interface Service {
   id: number;
   name: string;
   price: number;
   durationMinutes: number;
+  pending?: boolean;
+}
+
+interface ServiceCategory {
+  id: number;
+  name: string;
+  services: Service[];
+  pending?: boolean;
 }
 
 interface Barber {
@@ -15,6 +24,7 @@ interface Barber {
   name: string;
   experience?: number;
   bio?: string;
+  pending?: boolean;
 }
 
 type EditableBarber = Barber & {
@@ -24,15 +34,17 @@ type EditableBarber = Barber & {
 };
 
 export default function AdminPage() {
-  const [services, setServices] = useState<Service[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [barbers, setBarbers] = useState<EditableBarber[]>([]);
-  const [activeTab, setActiveTab] = useState<"services" | "barbers">("services");
+  const [services, setServices] = useState<Service[]>([]);
+  const [activeTab, setActiveTab] = useState<"serviceCategory" | "barbers">("serviceCategory");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [barberEdits, setBarberEdits] = useState<{ [key: number]: { name: string; experience: number; bio: string } }>({});
-
+  const [serviceEdits, setServiceEdits] = useState<{ [key: number]: { name: string; price: number; durationMinutes: number } }>({});
+  const [serviceCategoryEdits, setServiceCategoryEdits] = useState<{ [key: number]: { name: string; services: Service[] } }>({});
   const fetchData = async () => {
-    const resServices = await fetch("/api/services");
-    setServices(await resServices.json());
+    const resServices = await fetch("/api/serviceCategory");
+    setServiceCategories(await resServices.json());
     const resBarbers = await fetch("/api/barbers");
     setBarbers(await resBarbers.json());
   };
@@ -41,29 +53,104 @@ export default function AdminPage() {
     fetchData();
   }, []);
 
-  // --- CRUD Handlers ---
-  const handleDelete = async (type: "service" | "barber", id: number) => {
-    await fetch(`/api/${type}s/${id}`, { method: "DELETE" });
-    fetchData();
-  };
-
   const handleAddOrEdit = async (
-    type: "service" | "barber",
+    type: "services" | "barbers" | "serviceCategory",
     data: any,
     id?: number
   ) => {
+    const tempId = Date.now(); // temporary id for new items
+
+    // Optimistic UI update
+    if (!id) {
+      const newItem = { ...data, id: tempId, pending: true, services: [] }; // pending for serviceCategory
+      if (type === "serviceCategory") setServiceCategories(prev => [...prev, newItem]);
+      else if (type === "services") setServices(prev => [...prev, { ...data, id: tempId, pending: true }]);
+      else if (type === "barbers") setBarbers(prev => [...prev, { ...data, id: tempId, pending: true }]);
+    } else {
+      // Editing: update frontend immediately
+      if (type === "serviceCategory") {
+        setServiceCategories(prev =>
+          prev.map(item => (item.id === id ? { ...item, ...data } : item))
+        );
+      } else if (type === "services") {
+        setServices(prev =>
+          prev.map(item => (item.id === id ? { ...item, ...data } : item))
+        );
+      } else if (type === "barbers") {
+        setBarbers(prev =>
+          prev.map(item => (item.id === id ? { ...item, ...data } : item))
+        );
+      }
+    }
+
+    // Check if the item still exists (wasn't deleted)
+    let stillExists = true;
+    if (!id) {
+      if (type === "serviceCategory") stillExists = serviceCategories.some(item => item.id === tempId);
+      else if (type === "services") stillExists = services.some(item => item.id === tempId);
+      else if (type === "barbers") stillExists = barbers.some(item => item.id === tempId);
+
+      if (!stillExists) return; // Skip API call if user deleted
+    }
+
+    // Call API
     const method = id ? "PUT" : "POST";
-    await fetch(`/api/${type}s${id ? `/${id}` : ""}`, {
+    const res = await fetch(`/api/${type}/${id ? `${id}` : ""}`, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    fetchData();
+
+    if (!res.ok) {
+      console.error("Failed to save item:", await res.text());
+      return;
+    }
+
+    const result = await res.json();
+
+    // Replace temporary ID with real ID from API if adding
+    if (!id) {
+      if (type === "serviceCategory") {
+        setServiceCategories(prev =>
+          prev.map(item => (item.id === tempId ? result : item))
+        );
+      } else if (type === "services") {
+        setServices(prev => prev.map(item => (item.id === tempId ? result : item)));
+      } else if (type === "barbers") {
+        setBarbers(prev => prev.map(item => (item.id === tempId ? result : item)));
+      }
+    }
+  };
+
+  const handleDelete = async (
+    type: "services" | "barbers" | "serviceCategory",
+    id: number
+  ) => {
+    // Remove from frontend immediately
+    if (type === "serviceCategory") setServiceCategories(prev => prev.filter(sc => sc.id !== id));
+    else if (type === "services") setServices(prev => prev.filter(s => s.id !== id));
+    else if (type === "barbers") setBarbers(prev => prev.filter(b => b.id !== id));
+
+    // Only call API if item is not pending
+    let itemPending = false;
+
+    if (type === "serviceCategory") {
+      itemPending = !!serviceCategories.find(sc => sc.id === id)?.pending;
+    } else if (type === "services") {
+      itemPending = !!services.find(s => s.id === id)?.pending;
+    } else if (type === "barbers") {
+      itemPending = !!barbers.find(b => b.id === id)?.pending;
+    }
+
+    if (itemPending) return; // Skip API call
+
+    await fetch(`/api/${type}/${id}`, { method: "DELETE" });
   };
 
   // --- Forms ---
-  const [newService, setNewService] = useState({ name: "", price: 0, durationMinutes: 0 });
   const [newBarber, setNewBarber] = useState({ name: "", experience: 0, bio: "" });
+  const [newServiceCategory, setNewServiceCategory] = useState({ name: "", services: [] });
+  const [newService, setNewService] = useState({ name: "", price: 0, durationMinutes: 0 });
 
   return (
     <div className="max-w-4xl mx-auto mt-10 p-4">
@@ -71,8 +158,8 @@ export default function AdminPage() {
 
       <div className="flex gap-4 mb-6">
         <button
-          onClick={() => setActiveTab("services")}
-          className={`p-2 border ${activeTab === "services" ? "bg-blue-600 text-white" : ""}`}
+          onClick={() => setActiveTab("serviceCategory")}
+          className={`p-2 border ${activeTab === "serviceCategory" ? "bg-blue-600 text-white" : ""}`}
         >
           Services
         </button>
@@ -84,25 +171,34 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {activeTab === "services" && (
+      {activeTab === "serviceCategory" && (
         <div>
-          <h2 className="text-xl font-bold mb-4">Manage Services</h2>
-          <ul>
-            {services.map((s) => (
-              <li key={s.id} className="flex justify-between mb-2 border p-2 rounded">
-                <span>{s.name} - ${s.price} ({s.durationMinutes} min)</span>
-                <div className="flex gap-2">
-                  <button onClick={() => handleDelete("service", s.id)} className="bg-red-600 text-white p-1 rounded">Delete</button>
-                </div>
-              </li>
-            ))}
+          <h2 className="text-xl font-bold mb-4">Manage Service Categories</h2>
+          <ul className="flex flex-col gap-2">
+            {serviceCategories.map((sc) => {
+              const isEditing = editingId === sc.id;
+              const editValues = serviceCategoryEdits[sc.id] || { name: sc.name, services: sc.services };
+
+              return (
+                <ServiceCategoryItem
+                  key={sc.id}
+                  serviceCategory={sc}
+                  isEditing={isEditing}
+                  editValues={editValues}
+                  serviceCategoryEdits={serviceCategoryEdits}
+                  setServiceCategoryEdits={setServiceCategoryEdits}
+                  setEditingId={setEditingId}
+                  handleAddOrEdit={handleAddOrEdit}
+                  handleDelete={handleDelete}
+                  fetchData={fetchData}
+                />
+              );
+            })}
           </ul>
-          <h3 className="mt-4 font-bold">Add Service</h3>
+          <h3 className="mt-4 font-bold">Add Service Category</h3>
           <div className="flex flex-col gap-2 mt-2">
-            <input type="text" placeholder="Name" value={newService.name} onChange={e => setNewService({...newService, name: e.target.value})} className="border p-2" />
-            <input type="number" placeholder="Price" value={newService.price} onChange={e => setNewService({...newService, price: Number(e.target.value)})} className="border p-2" />
-            <input type="number" placeholder="Duration Minutes" value={newService.durationMinutes} onChange={e => setNewService({...newService, durationMinutes: Number(e.target.value)})} className="border p-2" />
-            <button onClick={() => { handleAddOrEdit("service", newService); setNewService({name:"",price:0,durationMinutes:0}) }} className="bg-green-600 text-white p-2 rounded">Add Service</button>
+            <input type="text" placeholder="Name" value={newServiceCategory.name} onChange={e => setNewServiceCategory({...newServiceCategory, name:e.target.value})} className="border p-2"/>
+            <button onClick={() => { handleAddOrEdit("serviceCategory", newServiceCategory); setNewServiceCategory({name:"", services:[]}) }} className="bg-green-600 text-white p-2 rounded">Add Service Category</button>
           </div>
         </div>
       )}
@@ -136,7 +232,7 @@ export default function AdminPage() {
             <input type="text" placeholder="Name" value={newBarber.name} onChange={e => setNewBarber({...newBarber, name:e.target.value})} className="border p-2"/>
             <input type="number" placeholder="Experience" value={newBarber.experience} onChange={e => setNewBarber({...newBarber, experience: Number(e.target.value)})} className="border p-2"/>
             <input type="text" placeholder="Bio" value={newBarber.bio} onChange={e => setNewBarber({...newBarber, bio: e.target.value})} className="border p-2"/>
-            <button onClick={() => { handleAddOrEdit("barber", newBarber); setNewBarber({name:"",experience:0,bio:""}) }} className="bg-green-600 text-white p-2 rounded">Add Barber</button>
+            <button onClick={() => { handleAddOrEdit("barbers", newBarber); setNewBarber({name:"",experience:0,bio:""}) }} className="bg-green-600 text-white p-2 rounded">Add Barber</button>
           </div>
         </div>
       )}
