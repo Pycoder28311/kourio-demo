@@ -1,41 +1,15 @@
 import React from "react";
+// Drag-and-drop
+import { useApp } from "@/app/context/AppWrapper";
+import { Barber } from "@/app/types";
 
-interface Barber {
-  id: number;
-  name: string;
-  experience?: number;
-  bio?: string;
-}
-
-type EditableBarber = Barber & {
-  editName?: string;
-  editExperience?: number;
-  editBio?: string;
-};
-
-type BarberItemProps = {
-  barber: EditableBarber;
-  isEditing: boolean;
-  editValues: { name: string; experience: number; bio: string };
-  barberEdits: { [key: number]: { name: string; experience: number; bio: string } };
-  setBarberEdits: React.Dispatch<React.SetStateAction<{ [key: number]: { name: string; experience: number; bio: string } }>>;
-  setEditingId: React.Dispatch<React.SetStateAction<number | null>>;
-  handleAddOrEdit: (type: "barbers", data: any, id?: number) => Promise<void>;
-  handleDelete: (type: "barbers", id: number) => void;
-  fetchData: () => void;
-};
-
-const BarberItem: React.FC<BarberItemProps> = ({
-  barber,
+const BarberItem: React.FC<{ barber: Barber, isEditing: boolean, editValues: { name: string; experience: number; bio: string; } }> = ({ 
+  barber, 
   isEditing,
-  editValues,
-  barberEdits,
-  setBarberEdits,
-  setEditingId,
-  handleAddOrEdit,
-  handleDelete,
-  fetchData
+  editValues 
 }) => {
+  const { barberEdits, setBarberEdits, setIsEditing, handleEdit, handleDelete, addingIds } = useApp();
+
   return (
     <li className="border p-2 rounded flex flex-col md:flex-row md:justify-between md:items-center gap-2">
       
@@ -83,16 +57,15 @@ const BarberItem: React.FC<BarberItemProps> = ({
           <>
             <button
               onClick={async () => {
-                await handleAddOrEdit("barbers", editValues, barber.id);
-                setEditingId(null);
-                fetchData();
+                await handleEdit("barbers", editValues, barber.id);
+                setIsEditing(null);
               }}
               className="bg-blue-600 text-white p-1 rounded"
             >
               Save
             </button>
             <button
-              onClick={() => setEditingId(null)}
+              onClick={() => setIsEditing(null)}
               className="bg-gray-400 text-white p-1 rounded"
             >
               Cancel
@@ -102,7 +75,7 @@ const BarberItem: React.FC<BarberItemProps> = ({
           <>
             <button
               onClick={() => {
-                setEditingId(barber.id);
+                setIsEditing(barber.id);
                 setBarberEdits({
                   ...barberEdits,
                   [barber.id]: {
@@ -118,7 +91,8 @@ const BarberItem: React.FC<BarberItemProps> = ({
             </button>
             <button
               onClick={() => handleDelete("barbers", barber.id)}
-              className="bg-red-600 text-white p-1 rounded"
+              className="bg-red-600 text-white p-1 rounded disabled:bg-gray-400 disabled:cursor-not-allowed disabled:text-gray-200"
+              disabled={addingIds.barbers.includes(barber.id)}
             >
               Delete
             </button>

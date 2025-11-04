@@ -13,12 +13,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Barbershop {
+  id                Int                  @id @default(autoincrement())
+  name              String
+  address           String
+  distance          Float?
+  description       String?
+  serviceCategories ServiceCategory[]    @relation("BarbershopServiceCategories")
+  weeklySchedules   BarbershopWeeklySchedule[]
+  dateOverrides     BarbershopDateOverride[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+}
+
 model ServiceCategory {
-  id        Int        @id @default(autoincrement())
-  name      String
-  services  Service[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id          Int          @id @default(autoincrement())
+  name        String
+  services    Service[]
+  barbershops Barbershop[] @relation("BarbershopServiceCategories")
+  position    Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Service {
@@ -29,6 +44,7 @@ model Service {
   categoryId       Int
   category         ServiceCategory @relation(fields: [categoryId], references: [id])
   appointments     Appointment[]
+  position         Int          @default(0)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -36,9 +52,10 @@ model Service {
 model Barber {
   id            Int            @id @default(autoincrement())
   name          String
-  experience    Int?           // χρόνια εμπειρίας
+  experience    Int?
   bio           String?
   appointments  Appointment[]
+  position      Int          @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -50,28 +67,48 @@ model Appointment {
   barberId    Int
   service     Service   @relation(fields: [serviceId], references: [id])
   barber      Barber    @relation(fields: [barberId], references: [id])
-  status      String    @default("pending") // π.χ. pending, confirmed, completed, canceled
+  status      String    @default("pending")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
 model WeeklySchedule {
-  id          Int      @id @default(autoincrement())
-  dayOfWeek   String   // e.g. "Monday", "Tuesday", etc.
-  openHour    String?  // nullable -> μπορεί να είναι κλειστό
+  id          Int                       @id @default(autoincrement())
+  dayOfWeek   String
+  openHour    String?
   closeHour   String?
-  alwaysClosed Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  alwaysClosed Boolean                  @default(false)
+  barbershops BarbershopWeeklySchedule[]
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
 }
 
 model DateScheduleOverride {
-  id          Int      @id @default(autoincrement())
-  date        DateTime @unique // συγκεκριμένη ημερομηνία
-  openHour    String?  // null = κλειστό
-  closeHour   String?
-  alwaysClosed Boolean  @default(true)
-  recurringYearly Boolean @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              Int                       @id @default(autoincrement())
+  date            DateTime                  @unique
+  openHour        String?
+  closeHour       String?
+  alwaysClosed    Boolean                   @default(true)
+  recurringYearly Boolean                   @default(false)
+  barbershops     BarbershopDateOverride[]
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+}
+
+model BarbershopWeeklySchedule {
+  barbershopId Int
+  scheduleId   Int
+  barbershop   Barbershop     @relation(fields: [barbershopId], references: [id])
+  schedule     WeeklySchedule @relation(fields: [scheduleId], references: [id])
+
+  @@id([barbershopId, scheduleId])
+}
+
+model BarbershopDateOverride {
+  barbershopId   Int
+  dateOverrideId Int
+  barbershop     Barbershop           @relation(fields: [barbershopId], references: [id])
+  dateOverride   DateScheduleOverride @relation(fields: [dateOverrideId], references: [id])
+
+  @@id([barbershopId, dateOverrideId])
 }

@@ -1,54 +1,20 @@
 import React from "react";
-
-interface Barber {
-  id: number;
-  name: string;
-  experience?: number;
-  bio?: string;
-}
-
-type EditableBarber = Barber & {
-  editName?: string;
-  editExperience?: number;
-  editBio?: string;
-};
-
-interface Service {
-  id: number;
-  name: string;
-  price: number;
-  durationMinutes: number;
-}
-
-interface ServiceCategory {
-  id: number;
-  name: string;
-  services: Service[];
-}
+// Drag-and-drop
+import { useApp } from "@/app/context/AppWrapper";
+import { Service, ServiceCategory } from "@/app/types";
 
 type ServiceCategoryItemProps = {
   serviceCategory: ServiceCategory;
   isEditing: boolean;
   editValues: { name: string; services: Service[] };
-  serviceCategoryEdits: { [key: number]: { name: string; services: Service[] } };
-  setServiceCategoryEdits: React.Dispatch<React.SetStateAction<{ [key: number]: { name: string; services: Service[] } }>>;
-  setEditingId: React.Dispatch<React.SetStateAction<number | null>>;
-  handleAddOrEdit: (type: "serviceCategory", data: any, id?: number) => Promise<void>;
-  handleDelete: (type: "serviceCategory", id: number) => void;
-  fetchData: () => void;
 };
 
 const ServiceCategoryItem: React.FC<ServiceCategoryItemProps> = ({
   serviceCategory,
   isEditing,
   editValues,
-  serviceCategoryEdits,
-  setServiceCategoryEdits,
-  setEditingId,
-  handleAddOrEdit,
-  handleDelete,
-  fetchData
 }) => {
+  const { serviceCategoryEdits, setServiceCategoryEdits, setIsEditing, addingIds, handleEdit, handleDelete } = useApp();
   return (
     <li className="border p-2 rounded flex flex-col md:flex-row md:justify-between md:items-center gap-2">
       
@@ -78,16 +44,15 @@ const ServiceCategoryItem: React.FC<ServiceCategoryItemProps> = ({
           <>
             <button
               onClick={async () => {
-                await handleAddOrEdit("serviceCategory", editValues, serviceCategory.id);
-                setEditingId(null);
-                fetchData();
+                await handleEdit("serviceCategory", editValues, serviceCategory.id);
+                setIsEditing(null);
               }}
               className="bg-blue-600 text-white p-1 rounded"
             >
               Save
             </button>
             <button
-              onClick={() => setEditingId(null)}
+              onClick={() => setIsEditing(null)}
               className="bg-gray-400 text-white p-1 rounded"
             >
               Cancel
@@ -97,7 +62,7 @@ const ServiceCategoryItem: React.FC<ServiceCategoryItemProps> = ({
           <>
             <button
               onClick={() => {
-                setEditingId(serviceCategory.id);
+                setIsEditing(serviceCategory.id);
                 setServiceCategoryEdits({
                   ...serviceCategoryEdits,
                   [serviceCategory.id]: {
@@ -112,14 +77,14 @@ const ServiceCategoryItem: React.FC<ServiceCategoryItemProps> = ({
             </button>
             <button
               onClick={() => handleDelete("serviceCategory", serviceCategory.id)}
-              className="bg-red-600 text-white p-1 rounded"
+              className="bg-red-600 text-white p-1 rounded disabled:bg-gray-400 disabled:cursor-not-allowed disabled:text-gray-200"
+              disabled={addingIds.serviceCategory.includes(serviceCategory.id)}
             >
               Delete
             </button>
           </>
         )}
       </div>
-
     </li>
   );
 };

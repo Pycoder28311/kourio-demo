@@ -6,12 +6,14 @@ export async function GET() {
     include: {
       services: true, // include the child services
     },
+    orderBy: { position: "asc" },
   });
   return NextResponse.json(servicesCategory);
 }
 
 export async function POST(req: Request) {
-  const { name } = await req.json();
-  const serviceCategory = await prisma.serviceCategory.create({ data: { name } });
+  const { name, position } = await req.json();
+  console.log(position)
+  const serviceCategory = await prisma.serviceCategory.create({ data: { name, position } });
   return NextResponse.json(serviceCategory);
 }
