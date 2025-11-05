@@ -87,7 +87,7 @@ export default function AdminPage() {
       {activeTab === "barbers" && (
         <div>
           <h2 className="text-xl font-bold mb-4">Manage Barbers</h2>
-          <DragDropContext onDragEnd={(result) => onDragEnd(result, "barber")}>
+          <DragDropContext onDragEnd={(result) => onDragEnd(result, "barbers")}>
             <Droppable droppableId="barbers">
               {(provided: DroppableProvided) => (
                 <div

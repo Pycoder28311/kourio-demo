@@ -122,7 +122,7 @@ export const handleDelete = async (
 
 export const onDragEnd = async (
   result: DropResult,
-  tableName: "serviceCategory" | "services" | "barber",
+  tableName: "serviceCategory" | "services" | "barbers",
   serviceCategories: ServiceCategory[],
   setServiceCategories: Dispatch<SetStateAction<ServiceCategory[]>>,
   services: Service[],
@@ -146,7 +146,7 @@ export const onDragEnd = async (
       items = [...services];
       setItems = setServices;
       break;
-    case "barber":
+    case "barbers":
       items = [...barbers];
       setItems = setBarbers;
       break;

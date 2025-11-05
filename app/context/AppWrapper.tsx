@@ -5,6 +5,8 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { DropResult } from "@hello-pangea/dnd";
 import { ServiceCategory, Service, Barber } from "../types";
 import { handleAdd as addFn, handleEdit as editFn, handleDelete as deleteFn, onDragEnd as dragFn } from "../lib/api";
+import NavBar from "../z-components/navigator";
+import Footer from "../z-components/footer";
 
 interface AddingIds {
   serviceCategory: number[];
@@ -44,7 +46,7 @@ interface AppContextProps {
   handleAdd: (type: "services" | "barbers" | "serviceCategory", data: any) => Promise<void>;
   handleEdit: (type: "services" | "barbers" | "serviceCategory", data: any, id: number) => Promise<void>;
   handleDelete: (type: "services" | "barbers" | "serviceCategory", id: number) => Promise<void>;
-  onDragEnd: (result: DropResult, tableName: "serviceCategory" | "services" | "barber") => Promise<void>;
+  onDragEnd: (result: DropResult, tableName: "serviceCategory" | "services" | "barbers") => Promise<void>;
 
   isEditing: number | null;
   setIsEditing: React.Dispatch<React.SetStateAction<number | null>>;
@@ -100,7 +102,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const handleDelete = (type: "services" | "barbers" | "serviceCategory", id: number) =>
     deleteFn(type, id, setServiceCategories, setServices, setBarbers);
 
-  const onDragEnd = (result: DropResult, tableName: "serviceCategory" | "services" | "barber") =>
+  const onDragEnd = (result: DropResult, tableName: "serviceCategory" | "services" | "barbers") =>
     dragFn(result, tableName, serviceCategories, setServiceCategories, services, setServices, barbers, setBarbers);
 
   return (
@@ -134,7 +136,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setIsEditing,
       }}
     >
+      <NavBar />
       {children}
+      <Footer />
     </AppContext.Provider>
   );
 };
